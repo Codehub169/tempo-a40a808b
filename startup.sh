@@ -10,13 +10,9 @@ PROJECT_ROOT=$(pwd)
 echo "Setting up backend..."
 cd "$PROJECT_ROOT/backend"
 
-# Check if node_modules exists, if not run npm install
-if [ ! -d "node_modules" ]; then
-  echo "Installing backend dependencies..."
-  npm install
-else
-  echo "Backend dependencies already installed."
-fi
+# Always run npm install to ensure all dependencies are present and correct
+echo "Installing backend dependencies..."
+npm install
 
 # Frontend setup
 echo "Setting up frontend..."
