@@ -9,9 +9,6 @@ import {
   Collapse,
   Icon,
   Link as ChakraLink,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
   useColorModeValue,
   useDisclosure,
   Badge,
@@ -27,8 +24,8 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiShoppingCart, FiChevronDown, FiUser, FiLogOut, FiGrid, FiPackage } from 'react-icons/fi';
 
 // Placeholder for authentication status (to be replaced with AuthContext)
-const isAuthenticated = true; // Example: true if user is logged in, false otherwise. NOTE: This will not update on logout without context.
-const cartItemCount = 3; // Example: number of items in cart (to be replaced with CartContext)
+const isAuthenticated = false; // Default to false, to be updated by AuthContext
+const cartItemCount = 0; // Example: number of items in cart (to be replaced with CartContext)
 
 /**
  * Navbar component
@@ -43,7 +40,6 @@ const Navbar = () => {
 
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
-  const popoverContentBgColor = useColorModeValue('white', 'gray.800');
 
   const NAV_ITEMS = [
     { label: 'All Products', href: '/products' },
@@ -67,6 +63,9 @@ const Navbar = () => {
       onToggle(); // Close mobile menu if open
     }
     // In a real app with AuthContext, you would also update the context state here.
+    // For now, we might need to force a re-render or page reload if isAuthenticated is not reactive.
+    // Consider removing window.location.reload() once AuthContext is properly implemented and manages isAuthenticated reactively.
+    window.location.reload(); // Temporary measure until AuthContext is implemented
   };
 
   return (
@@ -78,7 +77,7 @@ const Navbar = () => {
          borderColor={useColorModeValue('gray.200', 'gray.700')} 
          position="sticky" 
          top={0} 
-         zIndex="sticky"
+         zIndex="sticky" // Chakra's zIndex scale: 'sticky' is often 10
          w="100%"
     >
       <Flex maxW="container.xl" mx="auto" alignItems={'center'} justifyContent={'space-between'}>
@@ -117,12 +116,12 @@ const Navbar = () => {
               fontSize={'sm'}
               fontWeight={isActive(navItem.href) ? 'bold' : 'medium'}
               color={isActive(navItem.href) ? 'brand.primary' : linkColor}
-              bg={isActive(navItem.href) ? 'blue.50' : 'transparent'}
+              bg={isActive(navItem.href) ? useColorModeValue('blue.50', 'blue.900') : 'transparent'}
               rounded={'md'}
               _hover={{
                 textDecoration: 'none',
                 color: linkHoverColor,
-                bg: isActive(navItem.href) ? 'blue.100' : useColorModeValue('gray.100', 'gray.700'),
+                bg: isActive(navItem.href) ? useColorModeValue('blue.100', 'blue.800') : useColorModeValue('gray.100', 'gray.700'),
               }}
             >
               {navItem.label}
@@ -154,7 +153,7 @@ const Navbar = () => {
                   // src='https://bit.ly/broken-link' // Replace with actual user avatar URL or use a default icon
                 />
               </MenuButton>
-              <MenuList borderColor={useColorModeValue('gray.200', 'gray.700')} zIndex="popover">
+              <MenuList borderColor={useColorModeValue('gray.200', 'gray.700')} zIndex="popover"> {/* 'popover' is a zIndex value in Chakra's scale, usually high */}
                 <MenuItem as={RouterLink} to="/profile" icon={<Icon as={FiUser} />}>
                   Buyer Profile
                 </MenuItem>
@@ -254,18 +253,28 @@ const Navbar = () => {
  * Renders individual navigation items for the mobile menu.
  */
 const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
-  const { isOpen, onToggle } = useDisclosure();
+  const { isOpen, onToggle: onSubMenuToggle } = useDisclosure();
   const isActive = (path) => currentPath === path;
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
 
+  const handleFlexClick = () => {
+    if (onNavigate) {
+      onNavigate(); // This closes the main mobile menu
+    }
+    // If it's a parent item with children, toggle its own submenu
+    if (children) {
+        onSubMenuToggle();
+    }
+  };
+
   return (
-    <Stack spacing={4} onClick={children && onToggle}>
+    <Stack spacing={4} onClick={children ? onSubMenuToggle : undefined}>
       <Flex
         py={2}
         as={RouterLink}
         to={href}
-        onClick={onNavigate} // Close menu on navigation
+        onClick={handleFlexClick} 
         justifyContent="space-between"
         alignItems="center"
         _hover={{
@@ -275,7 +284,7 @@ const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
         fontWeight={isActive(href) ? 'bold' : 'medium'}
         color={isActive(href) ? 'brand.primary' : linkColor}
       >
-        <Text fontWeight={isActive(href) ? 600 : 500} color={isActive(href) ? 'brand.primary' : useColorModeValue('gray.600', 'gray.200')}>
+        <Text fontWeight={isActive(href) ? 'semibold' : 'medium'} color={isActive(href) ? 'brand.primary' : useColorModeValue('gray.600', 'gray.200')}>
           {label}
         </Text>
         {children && (
@@ -300,7 +309,12 @@ const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
         >
           {children &&
             children.map((child) => (
-              <ChakraLink as={RouterLink} key={child.label} py={2} to={child.href} onClick={onNavigate} 
+              <ChakraLink 
+                as={RouterLink} 
+                key={child.label} 
+                py={2} 
+                to={child.href} 
+                onClick={onNavigate} // Also close main mobile menu on sub-item click
                 fontWeight={isActive(child.href) ? 'bold' : 'medium'}
                 color={isActive(child.href) ? 'brand.primary' : linkColor}
                 _hover={{ textDecoration: 'none', color: linkHoverColor }}
