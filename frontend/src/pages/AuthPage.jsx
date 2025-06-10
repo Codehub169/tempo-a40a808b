@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Heading, Text, VStack, FormControl, FormLabel, Input, Button, Checkbox, Link, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, Select, Icon, InputGroup, InputRightElement } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, FormControl, FormLabel, Input, Button, Checkbox, Link, Tabs, TabList, TabPanels, Tab, TabPanel, useToast, Select, Icon, InputGroup, InputRightElement, HStack } from '@chakra-ui/react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { FiUser, FiLock, FiEye, FiEyeOff, FiLogIn, FiUserPlus } from 'react-icons/fi';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const toast = useToast();
-  const navigate = useNavigate(); // For redirecting after login/signup
+  const navigate = useNavigate();
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -32,8 +33,7 @@ const AuthPage = () => {
       duration: 3000,
       isClosable: true,
     });
-    // In a real app, you'd call an API, get a token, update AuthContext, and redirect
-    navigate('/'); // Redirect to home page after mock login
+    navigate('/'); 
   };
 
   const handleSignupSubmit = (e) => {
@@ -57,15 +57,17 @@ const AuthPage = () => {
       duration: 3000,
       isClosable: true,
     });
-    setIsLogin(true); // Switch to login tab after mock signup
-    // In a real app, you'd call an API to register the user
+    setIsLogin(true); 
   };
 
   const commonInputProps = {
     bg: 'gray.50',
     borderColor: 'gray.300',
     _hover: { borderColor: 'brand.primary' },
-    _focus: { borderColor: 'brand.primary', boxShadow: `0 0 0 1px var(--chakra-colors-brand-primary)` },
+    _focus: { 
+        borderColor: 'brand.primary', 
+        boxShadow: `0 0 0 1px var(--chakra-colors-brand-primary)` 
+    },
   };
 
   return (
@@ -97,10 +99,10 @@ const AuthPage = () => {
                   <FormControl isRequired>
                     <FormLabel>Password</FormLabel>
                     <InputGroup>
-                      <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" {...commonInputProps} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
+                      <Input type={showLoginPassword ? 'text' : 'password'} placeholder="••••••••" {...commonInputProps} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
                       <InputRightElement>
-                        <Button variant="ghost" onClick={() => setShowPassword(!showPassword)}>
-                          <Icon as={showPassword ? FiEyeOff : FiEye} />
+                        <Button variant="ghost" onClick={() => setShowLoginPassword(!showLoginPassword)} aria-label={showLoginPassword ? 'Hide password' : 'Show password'}>
+                          <Icon as={showLoginPassword ? FiEyeOff : FiEye} />
                         </Button>
                       </InputRightElement>
                     </InputGroup>
@@ -131,10 +133,10 @@ const AuthPage = () => {
                   <FormControl isRequired>
                     <FormLabel>Password</FormLabel>
                     <InputGroup>
-                      <Input type={showPassword ? 'text' : 'password'} placeholder="Minimum 6 characters" {...commonInputProps} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} />
+                      <Input type={showSignupPassword ? 'text' : 'password'} placeholder="Minimum 6 characters" {...commonInputProps} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} />
                        <InputRightElement>
-                        <Button variant="ghost" onClick={() => setShowPassword(!showPassword)}>
-                          <Icon as={showPassword ? FiEyeOff : FiEye} />
+                        <Button variant="ghost" onClick={() => setShowSignupPassword(!showSignupPassword)} aria-label={showSignupPassword ? 'Hide password' : 'Show password'}>
+                          <Icon as={showSignupPassword ? FiEyeOff : FiEye} />
                         </Button>
                       </InputRightElement>
                     </InputGroup>
@@ -144,7 +146,7 @@ const AuthPage = () => {
                      <InputGroup>
                       <Input type={showConfirmPassword ? 'text' : 'password'} placeholder="Re-enter your password" {...commonInputProps} value={signupConfirmPassword} onChange={(e) => setSignupConfirmPassword(e.target.value)} />
                       <InputRightElement>
-                        <Button variant="ghost" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                        <Button variant="ghost" onClick={() => setShowConfirmPassword(!showConfirmPassword)} aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}>
                           <Icon as={showConfirmPassword ? FiEyeOff : FiEye} />
                         </Button>
                       </InputRightElement>

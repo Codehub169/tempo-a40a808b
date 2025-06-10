@@ -23,9 +23,10 @@ import {
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiShoppingCart, FiChevronDown, FiUser, FiLogOut, FiGrid, FiPackage } from 'react-icons/fi';
 
-// Placeholder for authentication status (to be replaced with AuthContext)
-const isAuthenticated = false; // Default to false, to be updated by AuthContext
-const cartItemCount = 0; // Example: number of items in cart (to be replaced with CartContext)
+// TODO: Replace with actual authentication state from AuthContext
+const isAuthenticated = false; 
+// TODO: Replace with actual cart item count from CartContext or global state
+const cartItemCount = 0; 
 
 /**
  * Navbar component
@@ -50,6 +51,8 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = () => {
+    // TODO: Implement proper logout logic with AuthContext
+    // Example: authContext.logout();
     localStorage.removeItem('token'); // Assuming token is stored with key 'token'
     toast({
       title: 'Logged Out',
@@ -62,10 +65,9 @@ const Navbar = () => {
     if (isOpen) {
       onToggle(); // Close mobile menu if open
     }
-    // In a real app with AuthContext, you would also update the context state here.
-    // For now, we might need to force a re-render or page reload if isAuthenticated is not reactive.
-    // Consider removing window.location.reload() once AuthContext is properly implemented and manages isAuthenticated reactively.
-    window.location.reload(); // Temporary measure until AuthContext is implemented
+    // Temporary measure until AuthContext is implemented and isAuthenticated is reactive.
+    // Once AuthContext manages global state, this reload might not be needed.
+    window.location.reload(); 
   };
 
   return (
@@ -137,6 +139,7 @@ const Navbar = () => {
           spacing={{ base: 2, md: 4 }}
           alignItems="center"
         >
+          {/* TODO: Replace isAuthenticated with value from AuthContext */}
           {isAuthenticated ? (
             <Menu>
               <MenuButton
@@ -149,8 +152,8 @@ const Navbar = () => {
               >
                 <Avatar
                   size={'sm'}
-                  name='User Name' // Replace with actual user name from AuthContext
-                  // src='https://bit.ly/broken-link' // Replace with actual user avatar URL or use a default icon
+                  name='User Name' // TODO: Replace with actual user name from AuthContext
+                  // src='https://bit.ly/broken-link' // TODO: Replace with actual user avatar URL or use a default icon
                 />
               </MenuButton>
               <MenuList borderColor={useColorModeValue('gray.200', 'gray.700')} zIndex="popover"> {/* 'popover' is a zIndex value in Chakra's scale, usually high */}
@@ -161,6 +164,7 @@ const Navbar = () => {
                   My Orders
                 </MenuItem>
                 <MenuDivider />
+                {/* TODO: Conditionally show Seller Dashboard based on user role from AuthContext */}
                 <MenuItem as={RouterLink} to="/seller/dashboard" icon={<Icon as={FiGrid} />}>
                   Seller Dashboard
                 </MenuItem>
@@ -188,6 +192,7 @@ const Navbar = () => {
             _hover={{bg: useColorModeValue('gray.100', 'gray.700'), rounded: 'md'}}
           >
             <Icon as={FiShoppingCart} h={5} w={5} color={linkColor} />
+            {/* TODO: Replace cartItemCount with value from CartContext/global state */}
             {cartItemCount > 0 && (
               <Badge
                 position="absolute"
@@ -219,6 +224,7 @@ const Navbar = () => {
             <MobileNavItem key={navItem.label} {...navItem} currentPath={location.pathname} onNavigate={isOpen ? onToggle : undefined} />
           ))}
            {/* Mobile specific auth/account links */}
+           {/* TODO: Replace isAuthenticated with value from AuthContext */}
            {!isAuthenticated && (
              <ChakraLink
                 as={RouterLink}
@@ -238,6 +244,7 @@ const Navbar = () => {
             <>
              <ChakraLink as={RouterLink} py={2} to="/profile" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/profile') ? 'bold' : 'medium'} color={isActive('/profile') ? 'brand.primary' : linkColor}>Buyer Profile</ChakraLink>
              <ChakraLink as={RouterLink} py={2} to="/orders" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/orders') ? 'bold' : 'medium'} color={isActive('/orders') ? 'brand.primary' : linkColor}>My Orders</ChakraLink>
+             {/* TODO: Conditionally show Seller Dashboard based on user role from AuthContext */}
              <ChakraLink as={RouterLink} py={2} to="/seller/dashboard" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/seller/dashboard') ? 'bold' : 'medium'} color={isActive('/seller/dashboard') ? 'brand.primary' : linkColor}>Seller Dashboard</ChakraLink>
              <ChakraLink py={2} onClick={handleLogout} _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700'), cursor: 'pointer' }} color={linkColor}>Logout</ChakraLink>
             </>
@@ -253,19 +260,18 @@ const Navbar = () => {
  * Renders individual navigation items for the mobile menu.
  */
 const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
-  const { isOpen, onToggle: onSubMenuToggle } = useDisclosure();
+  const { isOpen: isSubMenuOpen, onToggle: onSubMenuToggle } = useDisclosure(); // Renamed isOpen to avoid conflict if used in parent
   const isActive = (path) => currentPath === path;
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
 
   const handleFlexClick = () => {
-    if (onNavigate) {
-      onNavigate(); // This closes the main mobile menu
+    // If it's a direct link (no children), call onNavigate to close the main mobile menu.
+    if (onNavigate && !children) { 
+      onNavigate(); 
     }
-    // If it's a parent item with children, toggle its own submenu
-    if (children) {
-        onSubMenuToggle();
-    }
+    // If it has children, the navigation to its href is handled by RouterLink.
+    // The submenu toggle is handled by the Stack's onClick.
   };
 
   return (
@@ -291,14 +297,14 @@ const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
           <Icon
             as={FiChevronDown}
             transition={'all .25s ease-in-out'}
-            transform={isOpen ? 'rotate(180deg)' : ''}
+            transform={isSubMenuOpen ? 'rotate(180deg)' : ''} // Use isSubMenuOpen here
             w={6}
             h={6}
           />
         )}
       </Flex>
 
-      <Collapse in={isOpen} animateOpacity style={{ marginTop: '0!important' }}>
+      <Collapse in={isSubMenuOpen} animateOpacity style={{ marginTop: '0!important' }}>
         <Stack
           mt={2}
           pl={4}
