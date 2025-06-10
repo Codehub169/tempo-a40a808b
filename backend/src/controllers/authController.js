@@ -1,81 +1,89 @@
-const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-require('dotenv').config(); // To access JWT_SECRET
+const jwt = require('jsonwebtoken');
+const User = require('../models/User'); // Assuming User model with create, findByEmail, findById methods
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
+// Utility to generate JWT
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
 
-exports.register = async (req, res) => {
+// @desc    Register a new user
+// @route   POST /api/auth/register
+// @access  Public
+const register = asyncHandler(async (req, res) => {
   const { name, email, password, role } = req.body;
 
-  if (!name || !email || !password || !role) {
-    return res.status(400).json({ message: 'Please provide name, email, password, and role' });
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error('Please provide name, email, and password');
   }
 
-  if (!['buyer', 'seller'].includes(role)) {
-    return res.status(400).json({ message: 'Role must be either buyer or seller' });
+  // Check if user already exists
+  const userExists = await User.findByEmail(email);
+  if (userExists) {
+    res.status(400);
+    throw new Error('User already exists with this email');
   }
 
-  try {
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ message: 'User with this email already exists' });
-    }
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Password hashing is handled by User.create model method
-    const newUser = await User.create({ name, email, password, role });
+  // Create user
+  const newUser = {
+    name,
+    email,
+    password: hashedPassword,
+    role: role || 'buyer', // Default to 'buyer' if not specified
+  };
 
-    const token = generateToken(newUser.id, newUser.role);
+  const createdUser = await User.create(newUser);
 
+  if (createdUser) {
     // Exclude password from the response
-    const { password: _, ...userWithoutPassword } = newUser;
-
+    const { password, ...userWithoutPassword } = createdUser;
     res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: userWithoutPassword,
+      ...userWithoutPassword,
+      token: generateToken(createdUser.id),
     });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+  } else {
+    res.status(400);
+    throw new Error('Invalid user data');
   }
-};
+});
 
-exports.login = async (req, res) => {
+// @desc    Authenticate user & get token (Login)
+// @route   POST /api/auth/login
+// @access  Public
+const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: 'Please provide email and password' });
+    res.status(400);
+    throw new Error('Please provide email and password');
   }
 
-  try {
-    const user = await User.findByEmail(email);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+  // Check for user by email
+  const user = await User.findByEmail(email);
 
-    // User model should store hashed password. User.findByEmail should return it.
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    const token = generateToken(user.id, user.role);
-
+  if (user && (await bcrypt.compare(password, user.password))) {
     // Exclude password from the response
-    const { password: _, ...userWithoutPassword } = user;
-
-    res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: userWithoutPassword,
+    const { password, ...userWithoutPassword } = user;
+    res.json({
+      ...userWithoutPassword,
+      token: generateToken(user.id),
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+  } else {
+    res.status(401); // Unauthorized
+    throw new Error('Invalid email or password');
   }
+});
+
+module.exports = {
+  register,
+  login,
+  generateToken, // Exporting if needed elsewhere, though typically used internally
 };

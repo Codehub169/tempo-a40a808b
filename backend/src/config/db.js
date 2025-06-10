@@ -14,6 +14,8 @@ if (!fs.existsSync(dbDir)) {
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Error opening database:', err.message);
+        // If the database cannot be opened, it's a critical error. Consider exiting.
+        process.exit(1);
     } else {
         console.log(`Connected to the SQLite database at ${dbPath}`);
     }
@@ -29,13 +31,13 @@ const initializeDB = () => {
                     name TEXT NOT NULL,
                     email TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL,
-                    role TEXT CHECK(role IN ('buyer', 'seller')) NOT NULL DEFAULT 'buyer',
+                    role TEXT CHECK(role IN ('buyer', 'seller', 'admin')) NOT NULL DEFAULT 'buyer',
                     profilePicture TEXT,
                     phoneNumber TEXT,
                     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            `, (err) => { if (err) return reject(err); });
+            `, (err) => { if (err) return reject(new Error(`Failed to create Users table: ${err.message}`)); });
 
             // Products Table
             db.run(`
@@ -47,18 +49,18 @@ const initializeDB = () => {
                     originalPrice REAL,
                     category TEXT NOT NULL,
                     brand TEXT,
-                    condition TEXT CHECK(condition IN ('new', 'like new', 'excellent', 'good', 'fair', 'parts only')) NOT NULL,
+                    condition TEXT CHECK(condition IN ('new_sealed', 'like_new', 'excellent', 'good', 'fair')) NOT NULL,
                     stockQuantity INTEGER NOT NULL DEFAULT 0,
                     images TEXT, -- JSON array of image URLs/paths
                     sellerId INTEGER NOT NULL,
                     specifications TEXT, -- JSON object for key-value specs
                     tags TEXT, -- JSON array of strings
-                    approved BOOLEAN DEFAULT 1, -- 1 for true, 0 for false
+                    approved BOOLEAN DEFAULT 0, -- 0 for false, 1 for true. Default to unapproved for seller-added items.
                     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sellerId) REFERENCES Users(id) ON DELETE CASCADE
                 )
-            `, (err) => { if (err) return reject(err); });
+            `, (err) => { if (err) return reject(new Error(`Failed to create Products table: ${err.message}`)); });
 
             // Orders Table
             db.run(`
@@ -68,13 +70,14 @@ const initializeDB = () => {
                     totalAmount REAL NOT NULL,
                     shippingAddress TEXT NOT NULL, -- JSON object
                     paymentMethod TEXT,
+                    paymentDetails TEXT, -- Store payment gateway response or transaction ID (JSON object)
                     paymentStatus TEXT CHECK(paymentStatus IN ('pending', 'paid', 'failed', 'refunded')) DEFAULT 'pending',
                     orderStatus TEXT CHECK(orderStatus IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled', 'completed')) DEFAULT 'pending',
                     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
                 )
-            `, (err) => { if (err) return reject(err); });
+            `, (err) => { if (err) return reject(new Error(`Failed to create Orders table: ${err.message}`)); });
 
             // OrderItems Table (Junction table for Orders and Products)
             db.run(`
@@ -91,9 +94,9 @@ const initializeDB = () => {
                     FOREIGN KEY (productId) REFERENCES Products(id) ON DELETE SET NULL, -- Product might be deleted, but order item should remain
                     FOREIGN KEY (sellerId) REFERENCES Users(id) ON DELETE SET NULL -- Seller might be deleted
                 )
-            `, (err) => { if (err) return reject(err); });
+            `, (err) => { if (err) return reject(new Error(`Failed to create OrderItems table: ${err.message}`)); });
 
-            // Triggers to update 'updatedAt' timestamps (Optional, but good practice)
+            // Triggers to update 'updatedAt' timestamps
             const tablesWithUpdatedAt = ['Users', 'Products', 'Orders', 'OrderItems'];
             tablesWithUpdatedAt.forEach(table => {
                 db.run(`
@@ -103,11 +106,13 @@ const initializeDB = () => {
                     BEGIN
                         UPDATE ${table} SET updatedAt = CURRENT_TIMESTAMP WHERE id = OLD.id;
                     END;
-                `, (err) => { if (err) console.warn(`Warning: Could not create update trigger for ${table}: ${err.message}`); });
+                `, (triggerErr) => { 
+                    if (triggerErr) console.warn(`Warning: Could not create update trigger for ${table}: ${triggerErr.message}`); 
+                });
             });
             
             console.log('Database tables checked/created.');
-            resolve(db);
+            resolve(db); // Resolve with the db instance
         });
     });
 };
@@ -118,14 +123,18 @@ if (require.main === module && process.argv.includes('--init')) {
     initializeDB()
         .then(() => {
             console.log('Database initialization script completed successfully.');
-            db.close();
-            process.exit(0);
+            db.close((closeErr) => {
+                if (closeErr) console.error('Error closing database:', closeErr.message);
+                process.exit(0);
+            });
         })
         .catch(err => {
             console.error('Database initialization script failed:', err);
-            db.close();
-            process.exit(1);
+            db.close((closeErr) => {
+                if (closeErr) console.error('Error closing database:', closeErr.message);
+                process.exit(1);
+            });
         });
 }
 
-module.exports = initializeDB;
+module.exports = { initializeDB, db };

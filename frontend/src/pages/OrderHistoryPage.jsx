@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Heading, Text, VStack, HStack, Button, Divider, Tag, Icon, Table, Thead, Tbody, Tr, Th, Td, TableContainer, Select, Input, InputGroup, InputLeftElement, SimpleGrid, Link as ChakraLink, useBreakpointValue } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Button, Divider, Tag, Icon, Table, Thead, Tbody, Tr, Th, Td, TableContainer, Select, Input, InputGroup, InputLeftElement, SimpleGrid, Link as ChakraLink, useBreakpointValue, Image } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
 import { FiShoppingBag, FiCalendar, FiFilter, FiSearch, FiTruck, FiEye, FiPackage } from 'react-icons/fi';
 
@@ -40,6 +40,7 @@ const initialOrders = [
 ];
 
 const getStatusColorScheme = (status) => {
+  if (!status) return 'gray';
   switch (status.toLowerCase()) {
     case 'delivered': return 'green';
     case 'shipped': return 'blue';
@@ -84,6 +85,9 @@ const OrderHistoryPage = () => {
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
                 bg="gray.50"
+                borderColor="gray.300"
+                _hover={{ borderColor: 'gray.400' }}
+                focusBorderColor="brand.primary"
               />
             </InputGroup>
             <Select 
@@ -91,6 +95,9 @@ const OrderHistoryPage = () => {
               value={filterStatus} 
               onChange={(e) => setFilterStatus(e.target.value)} 
               bg="gray.50"
+              borderColor="gray.300"
+              _hover={{ borderColor: 'gray.400' }}
+              focusBorderColor="brand.primary"
             >
               <option value="all">All Statuses</option>
               <option value="processing">Processing</option>
@@ -107,17 +114,20 @@ const OrderHistoryPage = () => {
                 {filteredOrders.map(order => (
                   <Box key={order.id} p={4} borderWidth="1px" borderColor="gray.200" rounded="md" shadow="sm">
                     <HStack justifyContent="space-between" mb={2}>
-                      <Text fontWeight="bold" color="brand.primary">{order.id}</Text>
+                      <Text fontWeight="bold" color="brand.primary" as={RouterLink} to={`/orders/${order.id}`}>{order.id}</Text>
                       <Tag colorScheme={getStatusColorScheme(order.status)} size="sm">{order.status}</Tag>
                     </HStack>
                     <Text fontSize="sm" color="gray.600" mb={1}><Icon as={FiCalendar} mr={1} verticalAlign="middle" /> {new Date(order.date).toLocaleDateString()}</Text>
-                    <Text fontSize="sm" color="gray.600" mb={2}>Total: <Text as="span" fontWeight="bold">{order.total.toLocaleString()}</Text></Text>
+                    <Text fontSize="sm" color="gray.600" mb={2}>Total: <Text as="span" fontWeight="bold">₹{order.total.toLocaleString('en-IN')}</Text></Text>
                     <VStack align="start" spacing={1} mb={3}>
                       {order.items.map((item, index) => (
-                        <Text key={index} fontSize="xs" color="gray.500" noOfLines={1}>- {item.name} (Qty: {item.quantity})</Text>
+                        <HStack key={index} spacing={2}>
+                           {item.image && <Image src={item.image} alt={item.name} boxSize="25px" objectFit="cover" borderRadius="sm" />}
+                           <Text fontSize="xs" color="gray.500" noOfLines={1}>{item.name} (Qty: {item.quantity})</Text>
+                        </HStack>
                       ))}
                     </VStack>
-                    <HStack spacing={2}>
+                    <HStack spacing={2} mt={3}>
                        <Button as={RouterLink} to={`/orders/${order.id}`} size="sm" variant="outline" colorScheme="blue" leftIcon={<FiEye />}>View Details</Button>
                        {order.trackingLink && order.status.toLowerCase() === 'shipped' && (
                           <Button as={ChakraLink} href={order.trackingLink} isExternal size="sm" variant="solid" colorScheme="green" leftIcon={<FiTruck />}>Track Order</Button>
@@ -143,13 +153,13 @@ const OrderHistoryPage = () => {
                   <Tbody>
                     {filteredOrders.map(order => (
                       <Tr key={order.id} _hover={{ bg: 'gray.50' }}>
-                        <Td fontWeight="medium" color="brand.primary">{order.id}</Td>
+                        <Td fontWeight="medium" color="brand.primary" as={RouterLink} to={`/orders/${order.id}`}>{order.id}</Td>
                         <Td>{new Date(order.date).toLocaleDateString()}</Td>
                         <Td fontSize="sm">
                           {order.items.map(item => item.name).join(', ').substring(0, 40)}{order.items.map(item => item.name).join(', ').length > 40 ? '...' : ''}
                           {order.items.length > 1 && <Text as="span" fontSize="xs" color="gray.500"> (+{order.items.length -1} more)</Text>}
                         </Td>
-                        <Td isNumeric fontWeight="medium">{order.total.toLocaleString()}</Td>
+                        <Td isNumeric fontWeight="medium">₹{order.total.toLocaleString('en-IN')}</Td>
                         <Td><Tag colorScheme={getStatusColorScheme(order.status)}>{order.status}</Tag></Td>
                         <Td>
                           <HStack spacing={2}>

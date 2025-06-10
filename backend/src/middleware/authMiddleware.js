@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/User'); // Assuming User model exists and has findById
 const asyncHandler = require('express-async-handler');
 
 // Middleware to protect routes by verifying JWT token
@@ -14,12 +14,19 @@ const protect = asyncHandler(async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from the token (excluding password)
-      req.user = await User.findById(decoded.id).select('-password');
+      // Get user from the token
+      // Password exclusion should be handled by the User model or when sending responses,
+      // not by a Mongoose-specific .select() method here.
+      req.user = await User.findById(decoded.id);
 
       if (!req.user) {
         res.status(401);
         throw new Error('Not authorized, user not found');
+      }
+      // Ensure password is not part of req.user if User.findById doesn't handle it
+      // This is a good place for a general check, though model or response formatting is preferred.
+      if (req.user && req.user.password) {
+        delete req.user.password;
       }
 
       next();
@@ -51,14 +58,4 @@ const admin = (req, res, next) => {
   }
 };
 
-// Middleware to check for seller role or admin role
-const sellerOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'seller' || req.user.role === 'admin')) {
-    next();
-  } else {
-    res.status(403);
-    throw new Error('Not authorized as a seller or admin');
-  }
-};
-
-module.exports = { protect, admin, sellerOrAdmin };
+module.exports = { protect, admin };

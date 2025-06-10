@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Heading, Text, VStack, HStack, FormControl, FormLabel, Input, Button, Select, Divider, Image, useToast, Icon, SimpleGrid, RadioGroup, Radio, Stack } from '@chakra-ui/react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { FiShoppingCart, FiCreditCard, FiMapPin, FiChevronLeft } from 'react-icons/fi';
 
 // Placeholder cart items - in a real app, this would come from CartContext or API
@@ -34,7 +34,9 @@ const CheckoutPage = () => {
     phone: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('creditCard');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,8 +47,10 @@ const CheckoutPage = () => {
   const shippingCost = subtotal > 500 ? 0 : 50; // Example shipping logic
   const totalAmount = subtotal + shippingCost;
 
-  const handlePlaceOrder = (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
+    setIsPlacingOrder(true);
+
     // Basic validation
     if (!shippingInfo.fullName || !shippingInfo.address || !shippingInfo.city || !shippingInfo.postalCode || !shippingInfo.phone) {
       toast({
@@ -56,21 +60,39 @@ const CheckoutPage = () => {
         duration: 3000,
         isClosable: true,
       });
+      setIsPlacingOrder(false);
       return;
     }
 
     // Placeholder for order placement logic
-    console.log('Order placed:', { shippingInfo, cartItems, paymentMethod, totalAmount });
-    toast({
-      title: 'Order Placed!',
-      description: 'Thank you for your purchase. Your order is being processed.',
-      status: 'success',
-      duration: 5000,
-      isClosable: true,
-    });
-    // Clear cart (placeholder)
-    setCartItems([]); 
-    // Redirect to order confirmation or home (placeholder - using react-router-dom Link for back to cart)
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      console.log('Order placed:', { shippingInfo, cartItems, paymentMethod, totalAmount });
+      
+      toast({
+        title: 'Order Placed!',
+        description: 'Thank you for your purchase. Your order is being processed.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      
+      setCartItems([]); // Clear cart
+      navigate('/orders'); // Navigate to order history or a confirmation page
+
+    } catch (error) {
+      console.error('Error placing order:', error);
+      toast({
+        title: 'Order Placement Failed',
+        description: 'There was an issue placing your order. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   return (
@@ -102,7 +124,7 @@ const CheckoutPage = () => {
               <VStack spacing={4} align="stretch">
                 <HStack spacing={3} alignItems="center">
                   <Icon as={FiMapPin} w={6} h={6} color="brand.primary" />
-                  <Heading as="h2" size="lg" color="brand.text">Shipping Address</Heading>
+                  <Heading as="h2" size="lg" color="brand.textDark">Shipping Address</Heading>
                 </HStack>
                 <FormControl isRequired>
                   <FormLabel>Full Name</FormLabel>
@@ -141,7 +163,7 @@ const CheckoutPage = () => {
               <VStack spacing={4} align="stretch">
                 <HStack spacing={3} alignItems="center">
                   <Icon as={FiCreditCard} w={6} h={6} color="brand.primary" />
-                  <Heading as="h2" size="lg" color="brand.text">Payment Method</Heading>
+                  <Heading as="h2" size="lg" color="brand.textDark">Payment Method</Heading>
                 </HStack>
                 <RadioGroup onChange={setPaymentMethod} value={paymentMethod}>
                   <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
@@ -162,14 +184,14 @@ const CheckoutPage = () => {
                   </VStack>
                 )}
               </VStack>
-              <Button type="submit" colorScheme="green" size="lg" width="full" mt={4} isLoading={false} loadingText="Placing Order...">
-                Place Order (Total: {totalAmount.toLocaleString()})
+              <Button type="submit" colorScheme="green" size="lg" width="full" mt={4} isLoading={isPlacingOrder} loadingText="Placing Order...">
+                Place Order (Total: ₹{totalAmount.toLocaleString('en-IN')})
               </Button>
             </VStack>
 
             {/* Order Summary Column */}
             <VStack spacing={6} align="stretch" bg="white" p={{ base: 6, md: 8 }} rounded="xl" shadow="xl" h="fit-content" position={{ lg: 'sticky' }} top={{ lg: '100px' }}>
-              <Heading as="h2" size="lg" color="brand.text">Order Summary</Heading>
+              <Heading as="h2" size="lg" color="brand.textDark">Order Summary</Heading>
               <VStack spacing={4} divider={<Divider />} align="stretch">
                 {cartItems.map(item => (
                   <HStack key={item.id} justifyContent="space-between" alignItems="center">
@@ -181,7 +203,7 @@ const CheckoutPage = () => {
                         <Text fontSize="xs" color="gray.500">Seller: {item.seller}</Text>
                       </VStack>
                     </HStack>
-                    <Text fontWeight="medium">{(item.price * item.quantity).toLocaleString()}</Text>
+                    <Text fontWeight="medium">₹{(item.price * item.quantity).toLocaleString('en-IN')}</Text>
                   </HStack>
                 ))}
               </VStack>
@@ -189,16 +211,16 @@ const CheckoutPage = () => {
               <VStack spacing={2} align="stretch">
                 <HStack justifyContent="space-between">
                   <Text color="gray.600">Subtotal</Text>
-                  <Text fontWeight="medium">{subtotal.toLocaleString()}</Text>
+                  <Text fontWeight="medium">₹{subtotal.toLocaleString('en-IN')}</Text>
                 </HStack>
                 <HStack justifyContent="space-between">
                   <Text color="gray.600">Shipping</Text>
-                  <Text fontWeight="medium">{shippingCost.toLocaleString()}</Text>
+                  <Text fontWeight="medium">₹{shippingCost.toLocaleString('en-IN')}</Text>
                 </HStack>
                 <Divider />
                 <HStack justifyContent="space-between" fontSize="xl">
-                  <Text fontWeight="bold" color="brand.text">Total</Text>
-                  <Text fontWeight="bold" color="brand.primary">{totalAmount.toLocaleString()}</Text>
+                  <Text fontWeight="bold" color="brand.textDark">Total</Text>
+                  <Text fontWeight="bold" color="brand.primary">₹{totalAmount.toLocaleString('en-IN')}</Text>
                 </HStack>
               </VStack>
             </VStack>

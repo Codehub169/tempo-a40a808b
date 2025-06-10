@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Button, Icon, Input, InputGroup, InputLeftElement, VStack, HStack, Tag, Text, useBreakpointValue, SimpleGrid, Card, CardBody, CardHeader, CardFooter, IconButton, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, useDisclosure, Link as ChakraLink
+  Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Button, Icon, Input, InputGroup, InputLeftElement, VStack, HStack, Tag, Text, useBreakpointValue, SimpleGrid, Card, CardBody, CardHeader, CardFooter, IconButton, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter, useDisclosure, Link as ChakraLink, FormControl
 } from '@chakra-ui/react';
 import { FiSearch, FiEye, FiTruck, FiCheckCircle, FiXCircle, FiArchive, FiFilter } from 'react-icons/fi';
 import { Link as RouterLink } from 'react-router-dom';
@@ -141,7 +141,7 @@ const SellerOrdersPage = () => {
                   <Th>Order ID</Th>
                   <Th>Date</Th>
                   <Th>Customer</Th>
-                  <Th>Total (₹)</Th>
+                  <Th>Total ("")</Th>
                   <Th>Status</Th>
                   <Th>Items</Th>
                   <Th>Actions</Th>
@@ -150,7 +150,11 @@ const SellerOrdersPage = () => {
               <Tbody>
                 {filteredOrders.map(order => (
                   <Tr key={order.id} _hover={{bg: "gray.50"}}>
-                    <Td><ChakraLink as={RouterLink} to={`#`} color="brand.primary" fontWeight="medium">{order.id}</ChakraLink></Td>
+                    <Td>
+                      <Text as="span" cursor="pointer" _hover={{ textDecoration: 'underline' }} color="brand.primary" fontWeight="medium" onClick={() => viewOrderDetails(order)}>
+                        {order.id}
+                      </Text>
+                    </Td>
                     <Td>{new Date(order.date).toLocaleDateString()}</Td>
                     <Td>{order.customer.name}</Td>
                     <Td isNumeric>{order.totalAmount.toLocaleString()}</Td>
@@ -184,14 +188,14 @@ const SellerOrdersPage = () => {
               <Card key={order.id} borderWidth="1px" borderRadius="lg" shadow="sm">
                 <CardHeader pb={2}>
                     <Flex justify="space-between" align="center">
-                        <Heading size="sm" as={RouterLink} to={`#`} color="brand.primary">{order.id}</Heading>
+                        <Heading size="sm" color="brand.primary" cursor="pointer" _hover={{ textDecoration: 'underline' }} onClick={() => viewOrderDetails(order)}>{order.id}</Heading>
                         <Tag size="sm" variant="solid" colorScheme={getStatusColorScheme(order.status)}>{order.status}</Tag>
                     </Flex>
                 </CardHeader>
                 <CardBody py={2}>
                   <Text fontSize="sm"><strong>Date:</strong> {new Date(order.date).toLocaleDateString()}</Text>
                   <Text fontSize="sm"><strong>Customer:</strong> {order.customer.name}</Text>
-                  <Text fontSize="sm"><strong>Total:</strong> ₹{order.totalAmount.toLocaleString()}</Text>
+                  <Text fontSize="sm"><strong>Total:</strong> "{order.totalAmount.toLocaleString()}</Text>
                   <Text fontSize="sm"><strong>Items:</strong> {order.items.map(i => i.name).join(', ')} ({order.items.length})</Text>
                 </CardBody>
                 <CardFooter pt={2}>
@@ -225,7 +229,7 @@ const SellerOrdersPage = () => {
               <VStack align="stretch" spacing={4}>
                 <Text><strong>Status:</strong> <Tag colorScheme={getStatusColorScheme(selectedOrder.status)}>{selectedOrder.status}</Tag></Text>
                 <Text><strong>Date:</strong> {new Date(selectedOrder.date).toLocaleDateString()}</Text>
-                <Text><strong>Total Amount:</strong> ₹{selectedOrder.totalAmount.toLocaleString()}</Text>
+                <Text><strong>Total Amount:</strong> "{selectedOrder.totalAmount.toLocaleString()}</Text>
                 
                 <Box>
                   <Heading size="sm" mb={2}>Customer Information</Heading>
@@ -246,7 +250,7 @@ const SellerOrdersPage = () => {
                     {selectedOrder.items.map(item => (
                         <HStack key={item.id} justify="space-between" borderBottomWidth="1px" borderColor="gray.100" py={2}>
                             <Text>{item.name} (Qty: {item.quantity})</Text>
-                            <Text>₹{(item.price * item.quantity).toLocaleString()}</Text>
+                            <Text>"{(item.price * item.quantity).toLocaleString()}</Text>
                         </HStack>
                     ))}
                 </Box>

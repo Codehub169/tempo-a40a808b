@@ -20,13 +20,14 @@ import {
   MenuList,
   MenuItem,
   MenuDivider,
-  Avatar
+  Avatar,
+  useToast
 } from '@chakra-ui/react';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { FiMenu, FiX, FiShoppingCart, FiChevronDown, FiUser, FiLogOut, FiGrid, FiPackage } from 'react-icons/fi';
 
 // Placeholder for authentication status (to be replaced with AuthContext)
-const isAuthenticated = true; // Example: true if user is logged in, false otherwise
+const isAuthenticated = true; // Example: true if user is logged in, false otherwise. NOTE: This will not update on logout without context.
 const cartItemCount = 3; // Example: number of items in cart (to be replaced with CartContext)
 
 /**
@@ -37,6 +38,8 @@ const cartItemCount = 3; // Example: number of items in cart (to be replaced wit
 const Navbar = () => {
   const { isOpen, onToggle } = useDisclosure(); // For mobile menu
   const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useToast();
 
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
@@ -49,6 +52,22 @@ const Navbar = () => {
   ];
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Assuming token is stored with key 'token'
+    toast({
+      title: 'Logged Out',
+      description: 'You have been successfully logged out.',
+      status: 'info',
+      duration: 3000,
+      isClosable: true,
+    });
+    navigate('/auth');
+    if (isOpen) {
+      onToggle(); // Close mobile menu if open
+    }
+    // In a real app with AuthContext, you would also update the context state here.
+  };
 
   return (
     <Box as="header" bg={useColorModeValue('white', 'gray.900')} 
@@ -131,8 +150,8 @@ const Navbar = () => {
               >
                 <Avatar
                   size={'sm'}
-                  name='User Name' // Replace with actual user name
-                  src='https://bit.ly/broken-link' // Replace with actual user avatar URL or use a default icon
+                  name='User Name' // Replace with actual user name from AuthContext
+                  // src='https://bit.ly/broken-link' // Replace with actual user avatar URL or use a default icon
                 />
               </MenuButton>
               <MenuList borderColor={useColorModeValue('gray.200', 'gray.700')} zIndex="popover">
@@ -147,7 +166,7 @@ const Navbar = () => {
                   Seller Dashboard
                 </MenuItem>
                 <MenuDivider />
-                <MenuItem icon={<Icon as={FiLogOut} />} onClick={() => {/* Implement Logout */}}>
+                <MenuItem icon={<Icon as={FiLogOut} />} onClick={handleLogout}>
                   Logout
                 </MenuItem>
               </MenuList>
@@ -198,7 +217,7 @@ const Navbar = () => {
           mt={2}
         >
           {NAV_ITEMS.map((navItem) => (
-            <MobileNavItem key={navItem.label} {...navItem} currentPath={location.pathname} />
+            <MobileNavItem key={navItem.label} {...navItem} currentPath={location.pathname} onNavigate={isOpen ? onToggle : undefined} />
           ))}
            {/* Mobile specific auth/account links */}
            {!isAuthenticated && (
@@ -221,7 +240,7 @@ const Navbar = () => {
              <ChakraLink as={RouterLink} py={2} to="/profile" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/profile') ? 'bold' : 'medium'} color={isActive('/profile') ? 'brand.primary' : linkColor}>Buyer Profile</ChakraLink>
              <ChakraLink as={RouterLink} py={2} to="/orders" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/orders') ? 'bold' : 'medium'} color={isActive('/orders') ? 'brand.primary' : linkColor}>My Orders</ChakraLink>
              <ChakraLink as={RouterLink} py={2} to="/seller/dashboard" _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} onClick={isOpen ? onToggle : undefined} fontWeight={isActive('/seller/dashboard') ? 'bold' : 'medium'} color={isActive('/seller/dashboard') ? 'brand.primary' : linkColor}>Seller Dashboard</ChakraLink>
-             <ChakraLink py={2} onClick={() => {/* Implement Logout */; if(isOpen) onToggle();}} _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700') }} color={linkColor}>Logout</ChakraLink>
+             <ChakraLink py={2} onClick={handleLogout} _hover={{ textDecoration: 'none', bg: useColorModeValue('gray.50', 'gray.700'), cursor: 'pointer' }} color={linkColor}>Logout</ChakraLink>
             </>
            )}
         </Stack>
@@ -234,7 +253,7 @@ const Navbar = () => {
  * MobileNavItem component
  * Renders individual navigation items for the mobile menu.
  */
-const MobileNavItem = ({ label, children, href, currentPath }) => {
+const MobileNavItem = ({ label, children, href, currentPath, onNavigate }) => {
   const { isOpen, onToggle } = useDisclosure();
   const isActive = (path) => currentPath === path;
   const linkColor = useColorModeValue('gray.600', 'gray.200');
@@ -246,6 +265,7 @@ const MobileNavItem = ({ label, children, href, currentPath }) => {
         py={2}
         as={RouterLink}
         to={href}
+        onClick={onNavigate} // Close menu on navigation
         justifyContent="space-between"
         alignItems="center"
         _hover={{
@@ -280,7 +300,7 @@ const MobileNavItem = ({ label, children, href, currentPath }) => {
         >
           {children &&
             children.map((child) => (
-              <ChakraLink as={RouterLink} key={child.label} py={2} to={child.href} 
+              <ChakraLink as={RouterLink} key={child.label} py={2} to={child.href} onClick={onNavigate} 
                 fontWeight={isActive(child.href) ? 'bold' : 'medium'}
                 color={isActive(child.href) ? 'brand.primary' : linkColor}
                 _hover={{ textDecoration: 'none', color: linkHoverColor }}

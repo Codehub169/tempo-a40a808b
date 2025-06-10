@@ -1,18 +1,57 @@
-const db = require('../config/db').promise();
+const { db } = require('../config/db'); // Import the db instance
+
+// Helper promisify functions for sqlite3 db methods
+const dbRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) { // Must use function for 'this' context
+      if (err) {
+        console.error('Error running SQL query (run):', sql, params, err.message);
+        reject(err);
+      } else {
+        resolve({ lastID: this.lastID, changes: this.changes });
+      }
+    });
+  });
+};
+
+const dbAll = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        console.error('Error running SQL query (all):', sql, params, err.message);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
+
+const dbGet = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) {
+        console.error('Error running SQL query (get):', sql, params, err.message);
+        reject(err);
+      } else {
+        resolve(row);
+      }
+    });
+  });
+};
 
 class OrderItem {
   // Create a new order item
-  // This might be called internally by an Order.create method within a transaction
   static async create({ orderId, productId, sellerId, quantity, priceAtPurchase }) {
     const sql = `
       INSERT INTO OrderItems (orderId, productId, sellerId, quantity, priceAtPurchase)
       VALUES (?, ?, ?, ?, ?)
     `;
     try {
-      const [result] = await db.execute(sql, [orderId, productId, sellerId, quantity, priceAtPurchase]);
-      return { id: result.insertId, orderId, productId, sellerId, quantity, priceAtPurchase };
+      const result = await dbRun(sql, [orderId, productId, sellerId, quantity, priceAtPurchase]);
+      return { id: result.lastID, orderId, productId, sellerId, quantity, priceAtPurchase };
     } catch (error) {
-      console.error('Error creating order item:', error);
+      // Error already logged by dbRun
       throw error;
     }
   }
@@ -22,14 +61,17 @@ class OrderItem {
     const sql = `
       SELECT oi.*, p.name as productName, p.images as productImages
       FROM OrderItems oi
-      JOIN Products p ON oi.productId = p.id
+      LEFT JOIN Products p ON oi.productId = p.id
       WHERE oi.orderId = ?
     `;
     try {
-      const [rows] = await db.execute(sql, [orderId]);
-      return rows.map(row => ({ ...row, productImages: JSON.parse(row.productImages || '[]') }));
+      const rows = await dbAll(sql, [orderId]);
+      return rows.map(row => ({
+         ...row, 
+         productImages: row.productImages ? JSON.parse(row.productImages) : [] 
+        }));
     } catch (error) {
-      console.error(`Error fetching order items for orderId ${orderId}:`, error);
+      // Error already logged by dbAll
       throw error;
     }
   }
@@ -37,11 +79,11 @@ class OrderItem {
   // Find all items sold by a given sellerId (across all orders)
   static async findBySellerId(sellerId, { page = 1, limit = 10 } = {}) {
     const offset = (page - 1) * limit;
-    const sql = `
+    const itemsSql = `
       SELECT oi.*, o.id as orderId, o.orderStatus, o.createdAt as orderDate, p.name as productName
       FROM OrderItems oi
       JOIN Orders o ON oi.orderId = o.id
-      JOIN Products p ON oi.productId = p.id
+      LEFT JOIN Products p ON oi.productId = p.id
       WHERE oi.sellerId = ?
       ORDER BY o.createdAt DESC
       LIMIT ? OFFSET ?
@@ -49,22 +91,20 @@ class OrderItem {
     const countSql = `SELECT COUNT(*) as total FROM OrderItems WHERE sellerId = ?`;
 
     try {
-      const [rows] = await db.execute(sql, [sellerId, limit, offset]);
-      const [countResult] = await db.execute(countSql, [sellerId]);
-      const totalItems = countResult[0].total;
+      const items = await dbAll(itemsSql, [sellerId, limit, offset]);
+      const countResult = await dbGet(countSql, [sellerId]);
+      const totalItems = countResult ? countResult.total : 0;
       return {
-        items: rows,
+        items: items.map(item => ({ ...item, productImages: item.productImages ? JSON.parse(item.productImages) : [] })),
         totalPages: Math.ceil(totalItems / limit),
-        currentPage: page,
+        currentPage: parseInt(page, 10),
         totalItems
       };
     } catch (error) {
-      console.error(`Error fetching order items for sellerId ${sellerId}:`, error);
+      // Errors already logged by dbAll/dbGet
       throw error;
     }
   }
-
-  // Potentially other methods like findById, update, delete if needed directly
 }
 
 module.exports = OrderItem;
